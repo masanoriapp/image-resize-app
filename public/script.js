@@ -4,8 +4,7 @@ const progressContainer = document.getElementById('progressContainer');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 
-// 最大ファイルサイズ 200MB
-const MAX_FILE_SIZE = 200 * 1024 * 1024;
+const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -16,7 +15,6 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  // 🔹 ファイルサイズチェック
   if (file.size > MAX_FILE_SIZE) {
     alert('ファイルが大きすぎます（最大200MB）');
     return;
@@ -41,7 +39,6 @@ form.addEventListener('submit', async (e) => {
       return;
     }
 
-    // ZIPダウンロード
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
