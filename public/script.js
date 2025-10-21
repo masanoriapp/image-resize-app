@@ -1,51 +1,61 @@
 const form = document.getElementById('uploadForm');
-const resultDiv = document.getElementById('result');
+const zipInput = document.getElementById('zipInput');
 const progressContainer = document.getElementById('progressContainer');
 const progressBar = document.getElementById('progressBar');
 const progressText = document.getElementById('progressText');
 
-form.addEventListener('submit', (e) => {
+// 最大ファイルサイズ 200MB
+const MAX_FILE_SIZE = 200 * 1024 * 1024;
+
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const input = document.getElementById('zipInput');
-  if (!input.files || input.files.length === 0) return alert('ZIPファイルを選択してください');
+
+  const file = zipInput.files[0];
+  if (!file) {
+    alert('ZIPファイルを選択してください');
+    return;
+  }
+
+  // 🔹 ファイルサイズチェック
+  if (file.size > MAX_FILE_SIZE) {
+    alert('ファイルが大きすぎます（最大200MB）');
+    return;
+  }
 
   const formData = new FormData();
-  formData.append('zipfile', input.files[0]);
+  formData.append('zipfile', file);
 
-  // プログレスバー表示
   progressContainer.classList.remove('hidden');
   progressBar.style.width = '0%';
   progressText.textContent = '0%';
-  resultDiv.innerHTML = '<p>変換中…</p>';
 
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/resize-zip', true);
-  xhr.responseType = 'blob';
+  try {
+    const response = await fetch('/api/resize-zip', {
+      method: 'POST',
+      body: formData
+    });
 
-  // アップロード進捗
-  xhr.upload.onprogress = (event) => {
-    if (event.lengthComputable) {
-      const percent = Math.round((event.loaded / event.total) * 100);
-      progressBar.style.width = percent + '%';
-      progressText.textContent = percent + '%';
+    if (!response.ok) {
+      const data = await response.json();
+      alert(`エラー: ${data.error}`);
+      return;
     }
-  };
 
-  xhr.onload = () => {
-    if (xhr.status === 200) {
-      const blob = xhr.response;
-      const url = URL.createObjectURL(blob);
-      resultDiv.innerHTML = `<a href="${url}" download="resized_images.zip">リサイズ済みZIPをダウンロード</a>`;
-      progressBar.style.width = '100%';
-      progressText.textContent = '100%';
-    } else {
-      resultDiv.innerHTML = `<p>エラー: ${xhr.statusText}</p>`;
-    }
-  };
+    // ZIPダウンロード
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'resized_images.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
 
-  xhr.onerror = () => {
-    resultDiv.innerHTML = '<p>アップロード中にエラーが発生しました</p>';
-  };
-
-  xhr.send(formData);
+    progressBar.style.width = '100%';
+    progressText.textContent = '完了';
+  } catch (err) {
+    console.error(err);
+    alert('アップロード中にエラーが発生しました');
+  }
 });
